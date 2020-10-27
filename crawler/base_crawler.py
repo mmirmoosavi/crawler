@@ -112,8 +112,8 @@ class TwitterCrawler():
                 cell = ws.cell(row=row + 2, column=col + 1)
                 cell.value = array[row][col]
 
-        os.makedirs('data', exist_ok=True)
-        wb.save('data/twitter_data.xlsx')
+        os.makedirs('../data', exist_ok=True)
+        wb.save('../data/twitter_data.xlsx')
 
     def load_page(self):
         while True:
