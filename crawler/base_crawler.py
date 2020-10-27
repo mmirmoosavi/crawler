@@ -8,6 +8,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions
 from openpyxl import Workbook
 import os
+from datetime import datetime, timedelta
 
 
 class TwitterCrawler():
@@ -31,12 +32,10 @@ class TwitterCrawler():
 
     def search_twitter(self, **kwargs):
 
-        search_query = ''
         keys = kwargs.keys()
-        if 'since' in keys:
-            search_query += 'since:{} '.format(kwargs['since'])
-        if 'until' in keys:
-            search_query += 'until:{} '.format(kwargs['until'])
+        since_date = None
+        end_date = None
+        search_query = ''
         if 'words' in keys:
             search_query += '{} '.format(kwargs['words'])
         if 'exact_phrases' in keys:
@@ -45,14 +44,55 @@ class TwitterCrawler():
             search_query += '({}) '.format(kwargs['hashtags'])
         if 'extra':
             search_query += '{} '.format(kwargs['extra'])
-        self.driver.get(
-            '{}search?q={}'.format(self.TWITTER_URL, search_query))
-        ## ensure the page is fully loaded
-        start_time = time()
-        WebDriverWait(self.driver, self.FIRST_LOAD).until(expected_conditions.presence_of_element_located(
-            (By.XPATH, '//article/div/div/div/div[2]/div[2]/div[2]/div[1]/div')))
-        end_time = time()
-        print(end_time - start_time)
+        if 'since' in twitter_adv_search_parameters.keys():
+            year, month, day = tuple(twitter_adv_search_parameters['since'].split('-'))
+            since_date = datetime(year=int(year), month=int(month), day=int(day))
+        if 'until' in twitter_adv_search_parameters.keys():
+            year, month, day = tuple(twitter_adv_search_parameters['until'].split('-'))
+            end_date = datetime(year=int(year), month=int(month), day=int(day))
+        extracted_posts = []
+        if since_date and end_date:
+            date = since_date
+            temp_query = search_query
+            while date <= end_date:
+                time_query = 'since:{} until:{}'.format(str(date)[:10], str(date + timedelta(days=1))[:10])
+                search_query += time_query
+                self.driver.get(
+                    '{}search?q={}'.format(self.TWITTER_URL, search_query))
+                ## ensure the page is fully loaded
+                start_time = time()
+                WebDriverWait(self.driver, self.FIRST_LOAD).until(expected_conditions.presence_of_element_located(
+                    (By.XPATH, '//article/div/div/div/div[2]/div[2]/div[2]/div[1]/div')))
+                end_time = time()
+                print(end_time - start_time)
+                extracted_posts.extend(self.extract_all_posts())
+                search_query = temp_query
+                date += timedelta(days=1)
+        elif since_date:
+            date = since_date
+            search_query += 'since: {} '.format(date)
+            while date <= datetime.now().date():
+                self.driver.get(
+                    '{}search?q={}'.format(self.TWITTER_URL, search_query))
+                ## ensure the page is fully loaded
+                start_time = time()
+                WebDriverWait(self.driver, self.FIRST_LOAD).until(expected_conditions.presence_of_element_located(
+                    (By.XPATH, '//article/div/div/div/div[2]/div[2]/div[2]/div[1]/div')))
+                end_time = time()
+                print(end_time - start_time)
+                extracted_posts.extend(self.extract_all_posts())
+                date += timedelta(days=1)
+        else:
+            self.driver.get(
+                '{}search?q={}'.format(self.TWITTER_URL, search_query))
+            ## ensure the page is fully loaded
+            start_time = time()
+            WebDriverWait(self.driver, self.FIRST_LOAD).until(expected_conditions.presence_of_element_located(
+                (By.XPATH, '//article/div/div/div/div[2]/div[2]/div[2]/div[1]/div')))
+            end_time = time()
+            print(end_time - start_time)
+            extracted_posts.extend(self.extract_all_posts())
+        return extracted_posts
 
     def extract_all_posts(self):
         last_height = self.driver.execute_script("return document.body.scrollHeight")
@@ -81,11 +121,12 @@ class TwitterCrawler():
                                 raise Exception
                             post_ids.append(post_id)
                             user_name = splited_href[3]
+                            text = post.text
                         except:
                             continue
-                        text = post.text
+
                         data.append([post_id, user_name, text, href])
-                print(data)
+                print(len(data))
                 self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
 
                 # Wait to load page
@@ -131,9 +172,9 @@ class TwitterCrawler():
 if __name__ == '__main__':
     crawler = TwitterCrawler()
     crawler.setUp(True)
-    twitter_adv_search_parameters = {'words': 'کرونا', 'since': '2020-10-24',
+    twitter_adv_search_parameters = {'words': 'کرونا', 'since': '2020-10-21',
                                      'until': '2020-10-25', 'extra': 'lang:fa -filter:replies'}
-    crawler.search_twitter(**twitter_adv_search_parameters)
-    data = crawler.extract_all_posts()
+
+    data = crawler.search_twitter(**twitter_adv_search_parameters)
     crawler.tearDown()
     crawler.write_to_excel(array=data)
