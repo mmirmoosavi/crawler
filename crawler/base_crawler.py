@@ -26,7 +26,8 @@ class TwitterCrawler():
         chrome_prefs["profile.managed_default_content_settings"] = {"images": 2}
 
         options.add_argument("--start-maximized")
-        self.driver = Chrome(executable_path='drivers/chromedriver', options=options)
+        print('ssssss')
+        self.driver = Chrome(executable_path='../drivers/chromedriver', options=options)
 
     def search_twitter(self, **kwargs):
 
