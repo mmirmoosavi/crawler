@@ -54,20 +54,25 @@ class TwitterCrawler():
         if since_date and end_date:
             date = since_date
             temp_query = search_query
-            while date <= end_date:
-                time_query = 'since:{} until:{}'.format(str(date)[:10], str(date + timedelta(days=1))[:10])
-                search_query += time_query
-                self.driver.get(
-                    '{}search?q={}'.format(self.TWITTER_URL, search_query))
-                ## ensure the page is fully loaded
-                start_time = time()
-                WebDriverWait(self.driver, self.FIRST_LOAD).until(expected_conditions.presence_of_element_located(
-                    (By.XPATH, '//article/div/div/div/div[2]/div[2]/div[2]/div[1]/div')))
-                end_time = time()
-                print(end_time - start_time)
-                extracted_posts.extend(self.extract_all_posts())
-                search_query = temp_query
-                date += timedelta(days=1)
+            while date <= end_date and date <= datetime.now():
+                try:
+                    time_query = 'since:{} until:{}'.format(str(date)[:10], str(date + timedelta(days=1))[:10])
+                    search_query += time_query
+                    print(search_query)
+                    self.driver.get(
+                        '{}search?q={}'.format(self.TWITTER_URL, search_query))
+                    ## ensure the page is fully loaded
+                    date += timedelta(days=1)
+                    start_time = time()
+                    WebDriverWait(self.driver, self.FIRST_LOAD).until(expected_conditions.presence_of_element_located(
+                        (By.XPATH, '//article/div/div/div/div[2]/div[2]/div[2]/div[1]/div')))
+                    end_time = time()
+                    print(end_time - start_time)
+                    extracted_posts.extend(self.extract_all_posts())
+                    search_query = temp_query
+                except:
+                    search_query = temp_query
+                    continue
         elif since_date:
             date = since_date
             search_query += 'since: {} '.format(date)
@@ -172,8 +177,8 @@ class TwitterCrawler():
 if __name__ == '__main__':
     crawler = TwitterCrawler()
     crawler.setUp(True)
-    twitter_adv_search_parameters = {'words': 'کرونا', 'since': '2020-10-21',
-                                     'until': '2020-10-25', 'extra': 'lang:fa -filter:replies'}
+    twitter_adv_search_parameters = {'words': 'چکاپا', 'since': '2020-07-22',
+                                     'until': '2020-11-10', 'extra': 'lang:fa -filter:replies'}
 
     data = crawler.search_twitter(**twitter_adv_search_parameters)
     crawler.tearDown()
